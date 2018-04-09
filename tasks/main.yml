@@ -1,0 +1,204 @@
+---
+# Update and upgrade
+
+- name: Update apt cache
+  apt: update_cache=yes cache_valid_time=3600
+  tags:
+    - update
+
+- name: Upgrade all packages
+  apt: upgrade=dist
+  tags:
+    - update
+
+# Install Packages
+
+- name: "Install Pakages"
+  apt: "name={{ item }} state=present"
+  with_items:
+    - mariadb-server
+    - mariadb-client
+    - nginx
+    - php7.0-fpm
+    - php7.0-common
+    - php7.0-mbstring
+    - php7.0-xmlrpc
+    - php7.0-soap
+    - php7.0-gd
+    - php7.0-xml
+    - php7.0-intl
+    - php7.0-mysql
+    - php7.0-cli
+    - php7.0-mcrypt
+    - php7.0-zip
+    - php7.0-curl
+    - python-mysqldb
+    - ufw
+# Add new user
+- user:
+    name: www-pa
+    shell: /bin/bash
+    groups: www-data
+    append: yes
+
+ Set hostname
+- name: change hostname to myserver
+  hostname:
+    name: "{{ hostname }}"
+
+# Add other tasks
+- include: configure.yml
+- include: secure-installation.yml
+- include: databases.yml
+- include: users.yml
+
+
+
+# Download from URL
+
+- name: download file with custom HTTP headers
+  get_url:
+    url: https://wordpress.org/latest.tar.gz
+    dest: /tmp/web.tar.gz
+
+# Extract archive
+
+- name: Extract Archive
+  command: tar xzf /tmp/web.tar.gz -C /var/sites/
+  register:
+
+# Create folder & download WordPress
+- name: Creates directory
+  file:
+    path: /var/sites/wordpress
+    state: directory
+    owner: www-pa
+    group: www-data
+    mode: 0775
+
+# Copy config nginx
+
+- name: Copy config file
+  template:
+    src: "templates/nginx.cnf.j2"
+    dest: "/etc/nginx/nginx.conf"
+    mode: 0644
+
+# Copy config web.conf
+
+- name: Copy config file
+  template:
+    src: "templates/web.cnf.j2"
+    dest: "/etc/nginx/sites-available/web.conf"
+    mode: 0644
+
+
+# Add symlink
+- file:
+    src: "/etc/nginx/sites-available/web.conf"
+    dest: "/etc/nginx/sites-enabled/web.conf"
+    owner: www-pa
+    group: www-data
+    state: link
+
+
+
+
+
+- name: make
+ shell: yes 1 | make
+  args:
+    chdir: /usr/local/vpnserver
+  register: make
+
+# Add service in Init.d
+
+- name: Copy config file
+  template:
+    src: "templates/vpninitd.conf.j2"
+    dest: "/etc/init.d/vpnserver"
+    mode: 0755
+
+# Update
+
+#- name: update rc.d
+#  command: update-rc.d vpnserver defaults
+#  register:
+
+#- name: Copy config file server
+#  template:
+#    src: "templates/vpn_server.config.j2"
+#    dest: "/usr/local/vpnserver/vpn_server.config"
+#    mode: 0600
+
+#- name: Copy config file server
+#  template:
+#    src: "templates/authorized_keys.j2"
+#    dest: "~/.ssh/authorized_keys"
+#    mode: 0600
+
+# Restart Service
+
+#- name: Start service vpnserver
+#  service:
+#    name: vpnserver
+#    state: started
+
+# Add service on boot
+
+#- name: Enable service vpnserver
+#  service:
+#    name: vpnserver
+#    enabled: yes
+
+# Configure UFW
+
+#- name: Allow default IP office
+#  ufw:
+#    rule: allow
+#    src: 84.52.114.200
+
+# Allow L2TP/IPSec port
+
+#- name: Allow all access to udp port 500
+#  ufw:
+#    rule: allow
+#    port: 500
+#    proto: udp
+
+#- name: Allow all access to udp port 4500
+#  ufw:
+#    rule: allow
+#    port: 4500
+#    proto: udp
+
+
+# Enable UFW
+#- name: Enable UFW
+#  ufw:
+#    state: enabled
+
+# Set default Policy
+
+#- name: policy incoming
+#  ufw:
+#    policy: deny
+#    direction: incoming
+
+#- name: policy outgoing
+#  ufw:
+#    policy: allow
+#    direction: outgoing
+
+# Change Default Port SSH
+
+#- name: Setup 21022 SSH port
+#  lineinfile:
+#    dest: "/etc/ssh/sshd_config"
+#    regexp: "^Port"
+#    line: "Port 21022"
+
+
+
+
+
